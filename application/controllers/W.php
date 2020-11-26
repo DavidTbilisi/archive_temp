@@ -106,11 +106,19 @@ class W extends CI_Controller
 		if ($count > 0 ) {
 			$this->db->insert($table, [$io_id_name=>$id]);
 		} else {
-			$this->where($io_id_name, $id);
+			$this->db->where($io_id_name, $id);
 			$this->db->update($table, [$io_id_name=>$id]);
 		}
 
 	}
+
+
+	public function not_checked_list()
+	{
+		$sql = "SELECT * FROM `io_object` WHERE io_object.level_of_description_id = 1 and io_object.id not in (SELECT checked_fond_list.io_objet_id from checked_fond_list) ORDER BY `io_object`.`id` ASC ";
+		$this->db->query($sql)->result();
+	}
+
 
 	public function test ($id) {
 		$data = $this->get_by_id($id);
@@ -143,3 +151,40 @@ class W extends CI_Controller
 
 
 }
+
+
+/*
+ *
+ *
+ *
+ *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ */
