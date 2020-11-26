@@ -91,7 +91,6 @@ class W extends CI_Controller
 	}
 
 	protected function init ($id, $level = 1) {
-		if ($level == 1) $this->fond_check_history($id);
 
 		$this->check_table_connection($id);
 		$this->parent_have_children_in_nextlevel($id, $level);
@@ -102,8 +101,8 @@ class W extends CI_Controller
 	{
 		$table = 'checked_fond_list';
 		$io_id_name = 'io_objet_id';
-		$count = $this->db->from($table)->where($io_id_name,$id)->count_all_results();
-		if ($count > 0 ) {
+		$count = $this->db->where($io_id_name,$id)->from($tablecount_all_results();
+		if ((int)$count == 0 ) {
 			$this->db->insert($table, [$io_id_name=>$id]);
 		} else {
 			$this->db->where($io_id_name, $id);
@@ -121,6 +120,8 @@ class W extends CI_Controller
 
 
 	public function test ($id) {
+		$this->fond_check_history($id);
+
 		$data = $this->get_by_id($id);
 		foreach ($data as $k1 => $v1):
 			print("├── l1_i{$v1->id}\n<br>");
@@ -151,40 +152,3 @@ class W extends CI_Controller
 
 
 }
-
-
-/*
- *
- *
- *
- *
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- */

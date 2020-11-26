@@ -31,7 +31,9 @@ function json_resp($data){
     $CI =& get_instance();
     $CI->output
         ->set_content_type('application/json')
-        ->set_output( json($data) );
+        ->set_output( json($data) )
+		->_display();
+    die;
 }
 
 function loop($times = 2, Callable $callback){

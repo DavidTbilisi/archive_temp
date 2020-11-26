@@ -16,6 +16,10 @@ user_guide_src/cilexer/dist/*
 user_guide_src/cilexer/pycilexer.egg-info/*
 /vendor/
 
+images
+openseadragon
+d28*
+.vscode
 # IDE Files
 #-------------------------
 /nbproject/
@@ -35,3 +39,6 @@ openseadragon*
 .vscode
 minmax*
 
+minmax
+minmax.c
+openseadragon-bin-2.4.2.zip
