@@ -101,7 +101,7 @@ class W extends CI_Controller
 	{
 		$table = 'checked_fond_list';
 		$io_id_name = 'io_objet_id';
-		$count = $this->db->where($io_id_name,$id)->from($tablecount_all_results();
+		$count = $this->db->where($io_id_name,$id)->from($table)->count_all_results();
 		if ((int)$count == 0 ) {
 			$this->db->insert($table, [$io_id_name=>$id]);
 		} else {
