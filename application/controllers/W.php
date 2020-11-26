@@ -91,11 +91,26 @@ class W extends CI_Controller
 	}
 
 	protected function init ($id, $level = 1) {
+		if ($level == 1) $this->fond_check_history($id);
+
 		$this->check_table_connection($id);
 		$this->parent_have_children_in_nextlevel($id, $level);
 		return $this->get_children($id, $level);
 	}
 
+	public function fond_check_history($id)
+	{
+		$table = 'checked_fond_list';
+		$io_id_name = 'io_objet_id';
+		$count = $this->db->from($table)->where($io_id_name,$id)->count_all_results();
+		if ($count > 0 ) {
+			$this->db->insert($table, [$io_id_name=>$id]);
+		} else {
+			$this->where($io_id_name, $id);
+			$this->db->update($table, [$io_id_name=>$id]);
+		}
+
+	}
 
 	public function test ($id) {
 		$data = $this->get_by_id($id);
