@@ -10,13 +10,13 @@
 </head>
 <body>
 
-<?php $img = $data['data']['output']['DZI']; ?>
+<?php $img = base_url().$data['data']['output']['JSONP']; print($img)?>
 
-<div id="openseadragon1" style="width: 800px; height: 600px;"></div>
+<div id="openseadragon1" style="width: 1000px; height: 900px;"></div>
 <script type="text/javascript">
 	var viewer = OpenSeadragon({
 		id: "openseadragon1",
-		prefixUrl: "openseadragon/images/",
+		prefixUrl: "<?php echo base_url()?>/openseadragon/images/",
 		tileSources: "<?php echo $img?>"
 	});
 </script>

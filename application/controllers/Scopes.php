@@ -1,239 +1,119 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class W extends CI_Controller
+class Scopes extends CI_Controller
 {
-
-
-//    GE_1_1_1969 
-//    GE_{repo}_{creator}_{identifier}
-	// repo - saitsorio || uaxlesig
-	public $lvl = array("fondi" => '1', "anaweri" => '2', "saqme" => '3', 'failebi' => '4');
-
 	public function __construct()
 	{
 		parent::__construct();
 		$this->load->helper("david");
 		$this->output->enable_profiler(false);
+		$this->load->library("red");
 	}
 
 	public function index()
 	{
-		$data = $this->db->query("SELECT `id` FROM `io_object` WHERE `level_of_description_id` = 1 order by `id` DESC")->result();
-
-		foreach ($data as $key => $value):
-			echo "<a href='".base_url('w/test/').$value->id."' > ფონდ {$value->id} შემოწმება </a> <br><br>";
-			echo "<a href='".base_url('w/count_levels/').$value->id."' > ფონდ {$value->id} საქმეების დათვლა  </a> <br><br>";
-		endforeach;
-	}
-
-	private function check_table_connection ($id){
-
-		$sql = "SELECT archive_db_checker.io_object_i18n.id 
-				FROM 
-            	archive_db_checker.io_object_i18n
-        		WHERE
-            	archive_db_checker.io_object_i18n.id = {$id}";
-		$io_obj_18 = $this->db->query($sql)->row();
-
-		if (empty($io_obj_18)) {
-			$insert = "INSERT INTO `io_object_i18n` (`check_status`,`title`, `is_start_exect_creation`, `start_year_creation`, `start_month_creation`, `start_day_creation`, `is_end_exect_creation`, `end_year_creation`, `end_month_creation`, `end_day_creation`, `is_start_exect_accumulation`, `start_year_accumulation`, `start_month_accumulation`, `start_day_accumulation`, `is_end_exect_accumulation`, `end_year_accumulation`, `end_month_accumulation`, `end_day_accumulation`, `language_and_script_notes`, `publication`, `extent_and_medium`, `archival_history`, `acquisition`, `scope_and_content`, `appraisal`, `accruals`, `arrangement`, `access_conditions`, `reproduction_conditions`, `physical_characteristics`, `finding_aids`, `location_of_originals`, `location_of_copies`, `related_units_of_description`, `id`, `culture`, `note`) VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{$id}', '', NULL)";
-			$this->db->query($insert);
-
-		} else {
-			$update = "UPDATE io_object_i18n set check_status = 1 WHERE id = {$id}";
-			$this->db->query($update);
+		$saqmes = $this->db->query("SELECT DISTINCT(saqme) as saqme FROM `scope3` WHERE 1 ")->result();
+		foreach($saqmes as $saqme){
+			echo "<p><a href='".base_url("scopes/saqme_count/{$saqme->saqme}")."'>  საქმე $saqme->saqme</a></p>";
 		}
 	}
 
-	public function get_children ($id, $level = 1)
+
+	public function saqme_count($saqme_id)
 	{
-		$get_current = "select id, level_of_description_id as level, parent_id from io_object where level_of_description_id  = {$level} and parent_id = {$id}";
-		$current = $this->db->query($get_current)->result();
-		return $current;
+		$saqme = $this->db->where('saqme',$saqme_id)->get("scope3")->row();
+		$count = $this->db
+			->select( "count(saqme) as count_file")
+			->where("creator",$saqme->creator)
+			->where("fond",$saqme->fond)
+			->where("anaweri",$saqme->anaweri)
+			->where("saqme",$saqme->saqme)
+			->get("scope3")->row();
+		$sq = R::findOne("saqmereport", 'saqme_id = ?', [$saqme->saqme]);
+		if (!$sq) {
+			$sq = R::dispense("saqmecount");
+		}
+		$sq->saqmeId = $saqme->saqme;
+		$sq->fileCount = $count->count_file;
+		R::store($sq);
+
+
+		echo $count->count_file;
 	}
 
-	public function count_children($id, $level = 1)
+
+	public function x()
 	{
-		$get_current = "select count(id) as children_count from io_object where level_of_description_id = {$level} and parent_id = {$id}";
-		$current = $this->db->query($get_current)->row()->children_count;
-		return $current;
-	}
+//        $this->db->distinct('creator');
+		$this->db->select('distinct(creator)');
+//        $this->db->where('level_of_description_id','4');
+//        $this->db->where('check_status','0');
+//        $this->db->limit('2');
+		$file_query = $this->db->get('scope3');
+		$creator_array = $file_query->result_array();
+
+//        echo '<pre>';
+//        print_r($creator_array);
+
+		$filename = APPPATH.'logs/scope3_2.log';
+		foreach ($creator_array as $creator_key => $creator_value)
+		{
+			echo '<br>'.$creator_value['creator'];
+			file_put_contents($filename, "\n".$creator_value['creator'], FILE_APPEND );
 
 
-	public function set_io_status($status_code, $id)
-	{
-		$sql = "update io_object set check_status = {$status_code} where id = {$id}";
-		$this->db->query($sql);
-	}
+			$this->db->select('distinct(fond)');
+			$this->db->where('creator',$creator_value['creator']);
+			$file_query = $this->db->get('scope3');
+			$fond_array = $file_query->result_array();
 
-	public function reset() {
-		$update = "UPDATE io_object set check_status = 0 WHERE check_status > 0";
-		$this->db->query($update);
-		redirect("/");
-	}
+			foreach ($fond_array as $fond_key => $fond_value)
+			{
+				echo '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'.$fond_value['fond'];
+				file_put_contents($filename, "\n\t".$fond_value['fond'], FILE_APPEND );
+				$this->db->select('distinct(anaweri)');
+				$this->db->where('fond',$fond_value['fond']);
+				$file_query = $this->db->get('scope3');
+				$anaweri_array = $file_query->result_array();
 
-	public function get_by_id($id, $level = 1)
-	{
-		$sql = "select id,level_of_description_id as level, parent_id from io_object where level_of_description_id  = {$level} and id = {$id}";
-		return $this->db->query($sql)->result();
-	}
+				foreach ($anaweri_array as $anaweri_key => $anaweri_value)
+				{
+					echo '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'.$anaweri_value['anaweri'];
+					file_put_contents($filename, "\n\t\t".$anaweri_value['anaweri'], FILE_APPEND );
 
-//	Dependent FN-s
-	public function parent_have_children_in_nextlevel($id, $level)
-	{
-			$ch_count = $this->count_children($id, $level);
-			if ($level > 2 && $ch_count > 0) {
-				$this->set_io_status(1,$id);
-			} else if ($level > 2) {
-				// skips first level
-				$this->set_io_status(2, $id);
+					$this->db->select('distinct(saqme)');
+					$this->db->where('anaweri',$anaweri_value['anaweri']);
+					$file_query = $this->db->get('scope3');
+					$saqme_array = $file_query->result_array();
+
+
+					foreach ($saqme_array as $saqme_key => $saqme_value)
+					{
+						$this->db->select('faili');
+						$this->db->where('creator',$creator_value['creator']);
+						$this->db->where('fond',$fond_value['fond']);
+						$this->db->where('anaweri',$anaweri_value['anaweri']);
+						$this->db->where('saqme',$saqme_value['saqme']);
+						$file_query = $this->db->get('scope3');
+						$file_array = $file_query->result_array();
+
+                       clog($this->db->last_query());
+
+						echo '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+						echo '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'.$saqme_value['saqme'];
+						echo ' - '.count($file_array);
+						file_put_contents($filename, "\n\t\t\t".$saqme_value['saqme']. " - " .count($file_array), FILE_APPEND );
+
+					}
+				}
 			}
-	}
-
-	protected function init ($id, $level = 1) {
-
-		$this->check_table_connection($id);
-		$this->parent_have_children_in_nextlevel($id, $level);
-		return $this->get_children($id, $level);
-	}
-
-
-	public function other_levels ($id, $level = 2) {
-		$this->parent_have_children_in_nextlevel($id, $level);
-		return $this->get_children($id, $level+1);
-	}
-
-
-
-	public function fond_check_history($id)
-	{
-		$table = 'checked_fond_list';
-		$io_id_name = 'io_objet_id';
-		$count = $this->db->where($io_id_name,$id)->from($table)->count_all_results();
-		if ((int)$count == 0 ) {
-			$this->db->insert($table, [$io_id_name=>$id]);
-		} else {
-			$this->db->where($io_id_name, $id);
-			$this->db->update($table, [$io_id_name=>$id]);
 		}
 
+
+//        echo $this->db->last_query();
+//        echo '<pre>';
+//        print_r($fond_array);
 	}
-
-
-	public function not_checked_list()
-	{
-		$sql = "SELECT * FROM `io_object` WHERE io_object.level_of_description_id = 1 and io_object.id not in (SELECT checked_fond_list.io_objet_id from checked_fond_list) ORDER BY `io_object`.`id` ASC ";
-		$this->db->query($sql)->result();
-	}
-
-
-	public function test ($id) {
-		$this->fond_check_history($id);
-
-		$data = $this->get_by_id($id);
-		foreach ($data as $k1 => $v1):
-			print("├── l1_i{$v1->id}\n<br>");
-			$data2 = $this->init($v1->id, 2);
-
-			foreach ($data2 as $k2 => $v2):
-				print("│\t├── l2_i{$v2->id}_p{$v1->id}\n<br>");
-
-				$data3 = $this->init($v2->id, 3);
-				foreach ($data3 as $k3 => $v3):
-					print("│\t│\t├── l3_i{$v3->id}_p{$v2->id}\n<br>");
-
-					$data4 = $this->init($v3->id, 4);
-					foreach ($data4 as $k4 => $v4):
-
-						print("│\t│\t│\t├──  l4_i{$v4->id}_p{$v3->id}\n<br>");
-						$data5 = $this->init($v4->id, 5);
-
-					endforeach;
-				endforeach;
-			endforeach;
-		endforeach;
-
-	}
-
-
-
-
-//	Counts
-	private function count_all_levels_sum($id)
-	{
-
-		$q2 = "SELECT reference FROM `io_object` WHERE `level_of_description_id` = 3 AND parent_id in (SELECT id FROM `io_object` WHERE `level_of_description_id` = 2 AND parent_id = {$id})";
-		$count_saqme = count($this->db->query($q2)->result_array());
-		$q3 = "SELECT reference FROM `io_object` WHERE `level_of_description_id` = 4 AND parent_id in(SELECT id FROM `io_object` WHERE `level_of_description_id` = 3 AND parent_id in (SELECT id FROM `io_object` WHERE `level_of_description_id` = 2 AND parent_id = {$id}))";
-		$count_faili = count($this->db->query($q3)->result_array());
-		return ["saqme"=>$count_saqme, 'faili'=>$count_faili];
-
-	}
-
-
-	private function count_saqme_sum($id){
-		$q1 = $this->db
-			->select("id, reference")
-			->where("level_of_description_id",2)
-			->where('parent_id', $id)
-			->get("io_object")
-			->result();
-
-		$return = [];
-		foreach($q1 as $q):
-			$count = $this->db
-				->select("count(id) as saqme_count")
-				->where("level_of_description_id",3)
-				->where('parent_id', $q->id)
-				->get("io_object")
-				->row()
-				->saqme_count;
-			$return [$q->reference] = $count ;
-		endforeach;
-		return $return;
-	}
-
-
-	public function count_levels($id = 1){
-		$fondi = $this->db->query("SELECT id, reference FROM `io_object` WHERE level_of_description_id = 1 and id = {$id} ")->row();
-		$saqmes = $this->count_saqme_sum($id);
-		$saqme_faili = $this->count_all_levels_sum($id);
-
-		$fonds = $this->db->query("SELECT id FROM `io_object` WHERE level_of_description_id = 1")->result();
-		$fond_array = [];
-		foreach($fonds as $fond):
-			$fond_array[] = $fond->id;
-		endforeach;
-		$fond_array;
-
-		$fq1 = $this->db
-			->select("id, reference")
-			->where("level_of_description_id",3)
-			->where('parent_id', $id)
-			->get("io_object")
-			->result();
-
-		$data = [];
-		foreach($saqmes as $key => $saqme):
-			$sq1 = "SELECT id, reference, level_of_description_id FROM io_object WHERE parent_id in (SELECT id from io_object where level_of_description_id = 3 and parent_id in (SELECT id from io_object where level_of_description_id = 2 and reference = '{$key}')) ";
-			$files = $this->db->query($sq1)->result_array();
-			$data[$key]  = ["saqme"=>$saqme, 'failebi'=>count($files)];
-		endforeach;
-
-
-
-		print("<pre>");
-		// პირველი ხაზი - საერთო მდგომარეობა
-		print(sprintf("ფონდი %s საქმე:%s ფაილი:%s\n", $fondi->reference, $saqme_faili['saqme'], $saqme_faili["faili"]));
-
-		// დეტალური ჩაშლა
-		foreach($data as $key => $saqme):
-			print(sprintf("\nანაწერი {$key} - საქმეების რაოდენობა:{$saqme['saqme']}, ფაილების რაოდენობა:{$saqme['failebi']}"));
-		endforeach;
-
-	}
-
-
 
 }

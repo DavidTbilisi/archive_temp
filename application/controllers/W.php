@@ -22,7 +22,8 @@ class W extends CI_Controller
 		$data = $this->db->query("SELECT `id` FROM `io_object` WHERE `level_of_description_id` = 1 order by `id` DESC")->result();
 
 		foreach ($data as $key => $value):
-			echo "<a href='".base_url('w/test/').$value->id."' > {$value->id} </a> <br>";
+			echo "<a href='".base_url('w/test/').$value->id."' > ფონდ {$value->id} შემოწმება </a> <br><br>";
+			echo "<a href='".base_url('w/count_levels/').$value->id."' > ფონდ {$value->id} საქმეების დათვლა  </a> <br><br>";
 		endforeach;
 	}
 
@@ -47,7 +48,7 @@ class W extends CI_Controller
 
 	public function get_children ($id, $level = 1)
 	{
-		$get_current = "select id,level_of_description_id as level, parent_id from io_object where level_of_description_id  = {$level} and parent_id = {$id}";
+		$get_current = "select id, level_of_description_id as level, parent_id from io_object where level_of_description_id  = {$level} and parent_id = {$id}";
 		$current = $this->db->query($get_current)->result();
 		return $current;
 	}
@@ -96,6 +97,14 @@ class W extends CI_Controller
 		$this->parent_have_children_in_nextlevel($id, $level);
 		return $this->get_children($id, $level);
 	}
+
+
+	public function other_levels ($id, $level = 2) {
+		$this->parent_have_children_in_nextlevel($id, $level);
+		return $this->get_children($id, $level+1);
+	}
+
+
 
 	public function fond_check_history($id)
 	{
@@ -148,6 +157,82 @@ class W extends CI_Controller
 	}
 
 
+
+
+//	Counts
+	private function count_all_levels_sum($id)
+	{
+
+		$q2 = "SELECT reference FROM `io_object` WHERE `level_of_description_id` = 3 AND parent_id in (SELECT id FROM `io_object` WHERE `level_of_description_id` = 2 AND parent_id = {$id})";
+		$count_saqme = count($this->db->query($q2)->result_array());
+		$q3 = "SELECT reference FROM `io_object` WHERE `level_of_description_id` = 4 AND parent_id in(SELECT id FROM `io_object` WHERE `level_of_description_id` = 3 AND parent_id in (SELECT id FROM `io_object` WHERE `level_of_description_id` = 2 AND parent_id = {$id}))";
+		$count_faili = count($this->db->query($q3)->result_array());
+		return ["saqme"=>$count_saqme, 'faili'=>$count_faili];
+
+	}
+
+
+	private function count_saqme_sum($id){
+		$q1 = $this->db
+			->select("id, reference")
+			->where("level_of_description_id",2)
+			->where('parent_id', $id)
+			->get("io_object")
+			->result();
+
+		$return = [];
+		foreach($q1 as $q):
+			$count = $this->db
+				->select("count(id) as saqme_count")
+				->where("level_of_description_id",3)
+				->where('parent_id', $q->id)
+				->get("io_object")
+				->row()
+				->saqme_count;
+			$return [$q->reference] = $count ;
+		endforeach;
+		return $return;
+	}
+
+
+	public function count_levels($id = 1){
+		$fondi = $this->db->query("SELECT id, reference FROM `io_object` WHERE level_of_description_id = 1 and id = {$id} ")->row();
+		$saqmes = $this->count_saqme_sum($id);
+		$saqme_faili = $this->count_all_levels_sum($id);
+
+		$fonds = $this->db->query("SELECT id FROM `io_object` WHERE level_of_description_id = 1")->result();
+		$fond_array = [];
+		foreach($fonds as $fond):
+			$fond_array[] = $fond->id;
+		endforeach;
+		$fond_array;
+
+		$fq1 = $this->db
+			->select("id, reference")
+			->where("level_of_description_id",3)
+			->where('parent_id', $id)
+			->get("io_object")
+			->result();
+
+		$data = [];
+		foreach($saqmes as $key => $saqme):
+			$sq1 = "SELECT id, reference, level_of_description_id FROM io_object WHERE parent_id in (SELECT id from io_object where level_of_description_id = 3 and parent_id in (SELECT id from io_object where level_of_description_id = 2 and reference = '{$key}')) ";
+			$files = $this->db->query($sq1)->result_array();
+			$data[$key]  = ["saqme"=>$saqme, 'failebi'=>count($files)];
+		endforeach;
+
+
+
+		print("<pre>");
+		// პირველი ხაზი - საერთო მდგომარეობა
+		print(sprintf("ფონდი %s საქმე:%s ფაილი:%s\n", $fondi->reference, $saqme_faili['saqme'], $saqme_faili["faili"]));
+
+		// დეტალური ჩაშლა
+		foreach($data as $key => $saqme):
+			print(sprintf("\nანაწერი {$key} - საქმეების რაოდენობა:{$saqme['saqme']}, ფაილების რაოდენობა:{$saqme['failebi']}"));
+		endforeach;
+
+	}
 
 
 
