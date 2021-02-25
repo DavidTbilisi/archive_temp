@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | a PHP script and you can easily do that on your own.
 |
 */
-$config['base_url'] = 'http://localhost/archive_db_checker';
+$config['base_url'] = 'http://archive_db_checker.localhost/';
 
 /*
 |--------------------------------------------------------------------------
